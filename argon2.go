@@ -1,10 +1,9 @@
 package argon2
 
 import (
-	"hash"
-	"testing"
-
 	"github.com/dchest/blake2b"
+	"hash"
+	"log"
 )
 
 const version uint32 = 0x13
@@ -25,7 +24,7 @@ inputs:
 
 */
 
-func argon2(output, P, S, K, X []byte, p, m, n uint32, t *testing.T) {
+func argon2(output, P, S, K, X []byte, p, m, n uint32, t *log.Logger) {
 	if p == 0 || m == 0 || n == 0 {
 		panic("argon: internal error: invalid params")
 	}
@@ -101,12 +100,12 @@ func argon2(output, P, S, K, X []byte, p, m, n uint32, t *testing.T) {
 	}
 
 	if t != nil {
-		t.Logf("Iterations: %d, Memory: %d KiB, Parallelism: %d lanes, Tag length: %d bytes", n, m, p, len(output))
-		t.Logf("Password[%d]: % x", len(P), P)
-		t.Logf("Nonce[%d]: % x", len(S), S)
-		t.Logf("Secret[%d]: % x", len(K), K)
-		t.Logf("Associated data[%d]: % x", len(X), X)
-		t.Logf("Input hash: % x", scratch[:64])
+		t.Printf("Iterations: %d, Memory: %d KiB, Parallelism: %d lanes, Tag length: %d bytes", n, m, p, len(output))
+		t.Printf("Password[%d]: % x", len(P), P)
+		t.Printf("Nonce[%d]: % x", len(S), S)
+		t.Printf("Secret[%d]: % x", len(K), K)
+		t.Printf("Associated data[%d]: % x", len(X), X)
+		t.Printf("Input hash: % x", scratch[:64])
 	}
 
 	for i := range scratch {
@@ -119,8 +118,7 @@ func argon2(output, P, S, K, X []byte, p, m, n uint32, t *testing.T) {
 	// Get down to business
 	for k := uint32(0); k < n; k++ {
 		if t != nil {
-			t.Log()
-			t.Logf(" After pass %d:", k)
+			t.Printf(" After pass %d:", k)
 		}
 		for slice := uint32(0); slice < 4; slice++ {
 			for lane := uint32(0); lane < p; lane++ {
@@ -145,7 +143,7 @@ func argon2(output, P, S, K, X []byte, p, m, n uint32, t *testing.T) {
 		}
 		if t != nil {
 			for i := range b {
-				t.Logf("  Block %.4d [0]: %x", i, b[i][0])
+				t.Printf("  Block %.4d [0]: %x", i, b[i][0])
 			}
 		}
 	}
@@ -169,17 +167,17 @@ func argon2(output, P, S, K, X []byte, p, m, n uint32, t *testing.T) {
 		btmp[i*8+7] = uint8(v >> 56)
 	}
 	if t != nil {
-		t.Logf("Final block: %x", btmp[:])
+		t.Printf("Final block: %x", btmp[:])
 	}
 	lh.Init(len(output))
 	lh.Write(btmp[:])
 	lh.Hash(output)
 	if t != nil {
-		t.Logf("Output: % X", output)
+		t.Printf("Output: % X", output)
 	}
 }
 
-func index(rand uint64, q, g, p, k, slice, lane, i uint32, t *testing.T) (rslice, rlane, ri uint32) {
+func index(rand uint64, q, g, p, k, slice, lane, i uint32, t *log.Logger) (rslice, rlane, ri uint32) {
 	rlane = uint32(rand>>32) % p
 
 	var start, max uint32
@@ -216,7 +214,7 @@ func index(rand uint64, q, g, p, k, slice, lane, i uint32, t *testing.T) (rslice
 	if t != nil {
 		i0 := lane*q + slice*g + i
 		j0 := rlane*q + ri
-		t.Logf("  i = %d(%d,%d,%d), rand = %d, max = %d, start = %d, phi = %d, j = %d(%d,%d,%d)", i0, lane, slice, i, rand, max, start, phi, j0, rlane, rslice, ri)
+		t.Printf("  i = %d(%d,%d,%d), rand = %d, max = %d, start = %d, phi = %d, j = %d(%d,%d,%d)", i0, lane, slice, i, rand, max, start, phi, j0, rlane, rslice, ri)
 	}
 
 	return rslice, rlane, ri
